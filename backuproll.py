@@ -39,7 +39,8 @@ DEFAULT_CONFIG = {
                 "monthly": 6
             }
         }
-    }
+    },
+    "pidfile": "/var/local/wurstmineberg/backuproll.pid"
 }
 
 class BackupFile:
@@ -233,7 +234,8 @@ class BackupRunner:
         if self.verbose:
             print("Running command '{}'".format(self.command))
         if not self.simulate:
-            retcode = subprocess.call(self.command, shell=True)
+            out = None if self.verbose else subprocess.DEVNULL
+            retcode = subprocess.call(self.command, stdout=out, stderr=out, shell=True)
             return retcode == 0
         return True
 
@@ -278,8 +280,22 @@ if __name__ == "__main__":
 
     simulate = False
     if arguments['--simulate']:
-        print("Simulating Backuproll: No real action will be performed")
+        print("Simulating backuproll: No real action will be performed")
         simulate = True
         verbose = True
 
+    pid_filename = CONFIG['pidfile']
+    if os.path.isfile(pid_filename):
+        with open(pid_filename, 'r') as pidfile:
+            pid = int(pidfile.read())
+        try:
+            os.kill(pid, 0)
+            print("Another backuproll process is still running. Terminating.", file=sys.stderr)
+            exit(1)
+        except ProcessLookupError:
+            pass
+    mypid = os.getpid()
+    with open(pid_filename, "w+") as pidfile:
+        pidfile.write(str(mypid))
     do_backuproll(selected_worlds, backupcommand, simulate=simulate, verbose=verbose)
+    os.remove(pid_filename)
