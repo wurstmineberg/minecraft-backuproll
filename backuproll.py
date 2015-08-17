@@ -87,7 +87,7 @@ class BackupRoll:
 
     def select_promote_daily_backup(self, backups, date):
         """Selects the backup to promote as daily backup for the calendar day given
-           This selects the latest backup earlier than 13 am if possible"""
+           This selects the latest backup earlier than 13:00 if possible"""
         backups = [ b for b in backups if b.datetime.date() == date ]
         selected_backup = None
         if len(backups) >= 1:
