@@ -145,7 +145,7 @@ class BackupRoll:
 
     def promote_backup_to_dir(self, backup, directory):
         if self.verbose:
-            print("Would promote {} to dir: {}".format(backup, directory))
+            print("Promoting {} to dir: {}".format(backup, directory))
         if not self.simulate:
             try:
                 os.makedirs(directory)
@@ -161,6 +161,8 @@ class BackupRoll:
             backup_to_promote = self.select_promote_daily_backup(self.list_backups_recent(), date)
             if backup_to_promote:
                 self.promote_backup_to_dir(backup_to_promote, self.dailydir)
+            elif self.verbose:
+                print("Can't find a daily backup to promote. Try later.")
 
         if self.should_promote_weekly_backup(date):
             if self.verbose:
@@ -168,6 +170,8 @@ class BackupRoll:
             backup_to_promote = self.select_promote_weekly_backup(self.list_backups_daily(), date)
             if backup_to_promote:
                 self.promote_backup_to_dir(backup_to_promote, self.weeklydir)
+            elif self.verbose:
+                print("Can't find a weekly backup to promote. Try later.")
 
         if self.should_promote_monthly_backup(date):
             if self.verbose:
@@ -175,6 +179,8 @@ class BackupRoll:
             backup_to_promote = self.select_promote_monthly_backup(self.list_backups_daily(), date)
             if backup_to_promote:
                 self.promote_backup_to_dir(backup_to_promote, self.monthlydir)
+            elif self.verbose:
+                print("Can't find a monthly backup to promote. Try later.")
 
     def delete_backup(self, backup):
         if self.verbose:
