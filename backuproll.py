@@ -118,7 +118,7 @@ class BackupRoll:
         return selected_backup
 
     def should_promote_daily_backup(self, date):
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         if now.date() > date or now.hour >= 13:
             # If it is already 13:00 or a later date a backup should be promoted if none exists
             return not self.get_backup_daily_for_date(date) and self.keepdict['daily'] > 0
@@ -154,7 +154,7 @@ class BackupRoll:
             os.link(backup.path, os.path.join(directory, backup.filename))
 
     def promote_backups(self):
-        date = datetime.date.today()
+        date = datetime.datetime.utcnow().date()
         if self.should_promote_daily_backup(date):
             if self.verbose:
                 print("We should promote a daily backup")
