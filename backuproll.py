@@ -293,13 +293,17 @@ if __name__ == "__main__":
     pid_filename = CONFIG['pidfile']
     if os.path.isfile(pid_filename):
         with open(pid_filename, 'r') as pidfile:
-            pid = int(pidfile.read())
-        try:
-            os.kill(pid, 0)
-            print("Another backuproll process is still running. Terminating.", file=sys.stderr)
-            exit(1)
-        except ProcessLookupError:
-            pass
+            try:
+                pid = int(pidfile.read())
+            except ValueError:
+                pid = None
+        if pid:
+            try:
+                os.kill(pid, 0)
+                print("Another backuproll process is still running. Terminating.", file=sys.stderr)
+                exit(1)
+            except ProcessLookupError:
+                pass
     mypid = os.getpid()
     with open(pid_filename, "w+") as pidfile:
         pidfile.write(str(mypid))
