@@ -230,6 +230,9 @@ class BackupRoll:
             if backup.datetime.month == date.month:
                 return backup
 
+def get_default_backuproll(world, simulate=False):
+    return BackupRoll('/opt/wurstmineberg/backup/{}'.format(world), '{}_'.format(world), '.tar.gz', '%Y-%m-%d_%Hh%M', None, simulate=simulate)
+
 class BackupRunner:
     def __init__(self, command, simulate=False, verbose=False):
         self.command = command
