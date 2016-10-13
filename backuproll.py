@@ -4,44 +4,46 @@
 """Backup roll script for one or more Minecraft servers
 
 Usage:
-  backuproll cron [options] [<world>]
-  backuproll backup [options] [<world>]
-  backuproll rotate [options] [<world>]
-  backuproll cleanup [options] [<world>]
-  backuproll restore-interactive [options]
-  backuproll restore [options] [world] []
+  backuproll [options] cron [<world>]
+  backuproll [options] backup [<world>]
+  backuproll [options] rotate [<world>]
+  backuproll [options] cleanup [<world>]
+  backuproll [options] restore-interactive
+  backuproll [options] restore <world> <backup>
+  backuproll -h | --help
+  backuproll --version
 
 Options:
   -h, --help         Print this message and exit.
-  --all              Apply the action to all configured worlds. This is the default.
-  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/backuproll2.json].
-  --version          Print version info and exit.
-  --verbose          Print things.
-  --simulate         Don't do any destructive operation, implies --verbose
   --cleanup          cron: Clean up the backup directory before operation
+  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/backuproll2.json].
   --no-backup        cron: Do everything but don't run the backup command
   --no-rotation      cron: Don't rotate the backup directory
-
+  --simulate         Don't do any destructive operation, implies --verbose
+  --verbose          Print things.
+  --version          Print version info and exit.
 """
 
 import sys
+
+import contextlib
+import curses
 import datetime
+import docopt
+import io
+import json
 import os
 import pathlib
-import contextlib
-import json
-import subprocess
 import shutil
+import subprocess
 import tarfile
-import io
-import time
 import threading
-import curses
+import time
 
 from curses import panel
-from docopt import docopt
 
 __version__ = '0.2'
+
 DEFAULT_CONFIG = {
     "pre_backup_command": "/opt/wurstmineberg/bin/minecraft saves off {world}",
     "post_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
@@ -78,7 +80,7 @@ RETENTION_GROUPS = [
 
 RETENTION_MANUAL = [
     'pre-update',
-    'reverter'
+    'reverted'
 ]
 
 class MinecraftBackupRollError(Exception):
@@ -1150,51 +1152,56 @@ class MinecraftBackupRoll:
 
 
 if __name__ == "__main__":
-    arguments = docopt(__doc__, version='Minecraft backup roll ' + __version__)
+    arguments = docopt.docopt(__doc__, version='Minecraft backup roll ' + __version__)
     config_file = arguments['--config']
 
     selected_worlds = []
     if arguments['<world>'] and not arguments['--all']:
         selected_worlds = [arguments['<world>']]
 
-
-    do_cleanup = False
-    do_backup = True
-    do_rotation = True
-
     simulate = False
+    verbose = False
     if arguments['--simulate']:
         print("Simulating backuproll: No real action will be performed")
         simulate = True
         verbose = True
+    if arguments['--verbose']:
+        verbose = True
 
-    if arguments['backup']:
+    if arguments['cron']:
+        do_cleanup = False
+        do_backup = True
+        do_rotation = True
+    elif arguments['backup']:
         do_backup = True
         do_cleanup = False
         do_rotation = False
-
-    if arguments['rotate']:
+    elif arguments['rotate']:
         do_backup = False
         do_cleanup = False
         do_rotation = True
-
-    if arguments['cleanup']:
+    elif arguments['cleanup']:
         do_backup = False
         do_cleanup = True
         do_rotation = False
+    elif arguments['restore']:
+        do_backup = False
+        do_cleanup = False
+        do_rotation = False
+        raise NotImplementedError('restore not implemented') #TODO
+    elif arguments['restore-interactive']:
+        do_backup = False
+        do_cleanup = False
+        do_rotation = False
+    else:
+        raise NotImplementedError('Subcommand not implemented')
 
     if arguments['--cleanup']:
         do_cleanup = True
-
     if arguments['--no-backup']:
         do_backup = False
-
     if arguments['--no-rotation']:
         do_rotation = False
-
-    verbose = False
-    if arguments['--verbose']:
-        verbose = True
 
     minecraft_backup_roll = MinecraftBackupRoll(config_file=config_file,
         use_pid_file=True,
@@ -1203,6 +1210,8 @@ if __name__ == "__main__":
         verbose=verbose)
 
     if arguments['restore']:
+        minecraft_backup_roll.interactive_restore(backup=arguments['<backup>'])
+    elif arguments['restore-interactive']:
         minecraft_backup_roll.interactive_restore()
     else:
         minecraft_backup_roll.do_activity(do_cleanup=do_cleanup, do_rotation=do_rotation, do_backup=do_backup)
