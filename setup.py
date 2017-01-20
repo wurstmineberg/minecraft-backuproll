@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+#from distutils.core import setup
+
+#!/usr/bin/env python
+
+from setuptools import setup
+
+setup(name='minecraft-backuproll',
+        #version='1.0',
+        description='A cron script to create and manage backups for minecraft servers',
+        author='Wurstmineberg',
+        author_email='mail@wurstmineberg.de',
+        #py_modules=["backuproll"],
+        packages=["backuproll"],
+        package_dir={
+            "backuproll": "",
+        },
+        package_data={"backuproll": ["assets/*.json"]},
+        use_scm_version = {
+            "write_to": "_version.py",
+        },
+        setup_requires=["setuptools_scm"],
+    )
+

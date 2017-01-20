@@ -42,29 +42,35 @@ import time
 
 from curses import panel
 
-__version__ = '0.2'
+from version import __version__
 
-DEFAULT_CONFIG = {
-    "pre_backup_command": "/opt/wurstmineberg/bin/minecraft saves off {world}",
-    "post_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
-    "fail_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
-    "pre_restore_command": "/opt/wurstmineberg/bin/minecraft saves off {world} && /opt/wurstmineberg/bin/minecraft stop {world}",
-    "post_restore_command": "/opt/wurstmineberg/bin/minecraft start {world}",
-    "backupfolder": "/mnt/backup/world",
-    "worldfolder": "/opt/wurstmineberg/world",
-    "dateformat": "%Y-%m-%dT%H:%M:%S",
-    "worlds": {
-        "testworld": {
-            "keep": {
-                "recent": 6,
-                "daily": 10,
-                "weekly": 4,
-                "monthly": 6
-            }
-        }
-    },
-    "pidfile": "/var/local/wurstmineberg/backuproll.pid"
-}
+from wmb import get_config, from_assets
+
+CONFIG = get_config("backuproll",
+                    base = from_assets(__file__),
+                    argparse_configfile = False)
+
+#DEFAULT_CONFIG = {
+    #"pre_backup_command": "/opt/wurstmineberg/bin/minecraft saves off {world}",
+    #"post_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
+    #"fail_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
+    #"pre_restore_command": "/opt/wurstmineberg/bin/minecraft saves off {world} && /opt/wurstmineberg/bin/minecraft stop {world}",
+    #"post_restore_command": "/opt/wurstmineberg/bin/minecraft start {world}",
+    #"backupfolder": "/mnt/backup/world",
+    #"worldfolder": "/opt/wurstmineberg/world",
+    #"dateformat": "%Y-%m-%dT%H:%M:%S",
+    #"worlds": {
+        #"testworld": {
+            #"keep": {
+                #"recent": 6,
+                #"daily": 10,
+                #"weekly": 4,
+                #"monthly": 6
+            #}
+        #}
+    #},
+    #"pidfile": "/var/local/wurstmineberg/backuproll.pid"
+#}
 
 RETENTION_RECENT = 'recent'
 RETENTION_DAILY = 'daily'
@@ -989,7 +995,7 @@ class MinecraftInteractiveRestoreInterface:
 
 
 class MinecraftBackupRoll:
-    def __init__(self, simulate=False, verbose=False, config=DEFAULT_CONFIG, config_file='/opt/wurstmineberg/config/backuproll2.json', use_pid_file=True, selected_worlds=[]):
+    def __init__(self, simulate=False, verbose=False, config=CONFIG, config_file='/opt/wurstmineberg/config/backuproll2.json', use_pid_file=True, selected_worlds=[]):
         self.config = config.copy()
         self.use_pid_file = use_pid_file
 
