@@ -973,9 +973,19 @@ class MinecraftInteractiveRestoreInterface:
 
 
 class MinecraftBackupRoll:
-    def __init__(self, simulate=False, verbose=False, config=CONFIG, config_file='/opt/wurstmineberg/config/backuproll2.json', use_pid_file=True, selected_worlds=[]):
+    def __init__(self, simulate=False, verbose=False, config=CONFIG,
+                 config_file=None, use_pid_file=True, selected_worlds=[]):
         self.config = config.copy()
         self.use_pid_file = use_pid_file
+
+        if not config_file is None:
+            config_file='/opt/wurstMineberg/config/backuproll2.json'
+            raise DeprecationWarning(
+"""
+The `config_file` keyword argument for MinecraftBackupRoll.__init__ is
+deprecated and will be removed soon. Instead, use the `config` keyword argument
+(and something like wurstmineberg-common-python to generate its contents).
+""")
 
         with contextlib.suppress(FileNotFoundError):
             with open(config_file) as file_cfg:
