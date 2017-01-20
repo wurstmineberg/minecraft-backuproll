@@ -1134,7 +1134,7 @@ class MinecraftBackupRoll:
             if pid:
                 try:
                     os.kill(pid, 0)
-                    print("Another backuproll process is still running. Terminating.", file=sys.stderr)
+                    print('Another backuproll process with PID {} is still running. Terminating.'.format(pid), file=sys.stderr)
                     return False
                 except ProcessLookupError:
                     pass
