@@ -50,28 +50,6 @@ CONFIG = get_config("backuproll",
                     base = from_assets(__file__),
                     argparse_configfile = False)
 
-#DEFAULT_CONFIG = {
-    #"pre_backup_command": "/opt/wurstmineberg/bin/minecraft saves off {world}",
-    #"post_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
-    #"fail_backup_command": "/opt/wurstmineberg/bin/minecraft saves on {world}",
-    #"pre_restore_command": "/opt/wurstmineberg/bin/minecraft saves off {world} && /opt/wurstmineberg/bin/minecraft stop {world}",
-    #"post_restore_command": "/opt/wurstmineberg/bin/minecraft start {world}",
-    #"backupfolder": "/mnt/backup/world",
-    #"worldfolder": "/opt/wurstmineberg/world",
-    #"dateformat": "%Y-%m-%dT%H:%M:%S",
-    #"worlds": {
-        #"testworld": {
-            #"keep": {
-                #"recent": 6,
-                #"daily": 10,
-                #"weekly": 4,
-                #"monthly": 6
-            #}
-        #}
-    #},
-    #"pidfile": "/var/local/wurstmineberg/backuproll.pid"
-#}
-
 RETENTION_RECENT = 'recent'
 RETENTION_DAILY = 'daily'
 RETENTION_WEEKLY = 'weekly'
