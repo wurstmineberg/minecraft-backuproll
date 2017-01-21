@@ -407,10 +407,10 @@ class BackupRetainGroup:
             return []
 
     def list_in_progress_backups(self):
-        return [backup for backup in self.list_all_backups() if f.in_progress]
+        return [backup for backup in self.list_all_backups() if backup.in_progress]
 
     def list_backups(self):
-        return [backup for backup in self.list_all_backups() if not f.in_progress]
+        return [backup for backup in self.list_all_backups() if not backup.in_progress]
 
     def get_latest_backup(self):
         backups = self.list_backups()
