@@ -1071,7 +1071,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
     def _do_restore(self, backup, world_only=True, pre_restore_command=None, post_restore_command=None):
         if world_only:
             restore_subdirectory = 'world'
-            if not os.path.exits(os.path.join(backup.directory, restore_subdirectory)):
+            if not os.path.exists(os.path.join(backup.directory, restore_subdirectory)):
                 restore_subdirectory = interface.backup.retain_group.collection.name
         else:
             restore_subdirectory = ''
