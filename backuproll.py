@@ -48,7 +48,7 @@ from wmb import get_config, from_assets
 
 CONFIG = get_config("backuproll",
                     base = from_assets(__file__),
-                    argparse_configfile = False)
+                    argparse_configfile = True)
 
 RETENTION_RECENT = 'recent'
 RETENTION_DAILY = 'daily'
@@ -1147,7 +1147,6 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
 
 if __name__ == "__main__":
     arguments = docopt.docopt(__doc__, version='Minecraft backup roll ' + __version__)
-    config_file = arguments['--config']
 
     selected_worlds = []
     if arguments['<world>'] and not arguments['--all']:
@@ -1197,7 +1196,7 @@ if __name__ == "__main__":
     if arguments['--no-rotation']:
         do_rotation = False
 
-    minecraft_backup_roll = MinecraftBackupRoll(config_file=config_file,
+    minecraft_backup_roll = MinecraftBackupRoll(
         use_pid_file=True,
         selected_worlds=selected_worlds,
         simulate=simulate,
