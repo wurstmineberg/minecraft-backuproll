@@ -21,5 +21,9 @@ setup(name='minecraft-backuproll',
             "write_to": "_version.py",
         },
         setup_requires=["setuptools_scm"],
+        install_requires=[
+            "docopt",
+            "setuptools-scm",
+        ],
     )
 
