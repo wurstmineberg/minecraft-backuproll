@@ -46,9 +46,16 @@ from version import __version__
 
 from wmb import get_config, from_assets
 
+CONFIG_TYPES = {
+    "backupfolder": pathlib.Path,
+    "worldfolder": pathlib.Path,
+    "pidfile": pathlib.Path,
+}
+
 CONFIG = get_config("backuproll2",
-                    base = from_assets(__file__),
-                    argparse_configfile = True)
+                    base=from_assets(__file__),
+                    argparse_configfile=True,
+                    value_types=CONFIG_TYPES)
 
 RETENTION_RECENT = 'recent'
 RETENTION_DAILY = 'daily'
@@ -1067,8 +1074,8 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
             print("No world selected and none found in the config file. Exiting.")
             raise MinecraftBackupRollError("Nothing to do.")
 
-        self.backupfolder = pathlib.Path(self.config['backupfolder'])
-        self.worldfolder = pathlib.Path(self.config['worldfolder'])
+        self.backupfolder = self.config['backupfolder']
+        self.worldfolder = self.config['worldfolder']
         self.dateformat = self.config['dateformat']
         self.worldconfig = self.config['worlds']
         self.locked = False
@@ -1194,7 +1201,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
 
     def unlock(self):
         if self.locked:
-            pathlib.Path(self.config['pidfile']).unlink()
+            self.config['pidfile'].unlink()
         else:
             raise MinecraftBackupRollError("Wasn't locked in the first place.")
 
@@ -1204,7 +1211,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
             time.sleep(1)
 
     def try_lock(self):
-        pid_filename = pathlib.Path(self.config['pidfile'])
+        pid_filename = self.config['pidfile']
         if pid_filename.is_file():
             with pid_filename.open() as pidfile:
                 try:
