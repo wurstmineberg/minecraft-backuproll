@@ -1120,6 +1120,15 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         return BackupStore(self.backupfolder, self.dateformat, readonly)
 
     def do_activity(self, do_cleanup=False, do_backup=True, do_rotation=True):
+        """
+        Perform the actual operation(s).
+
+        Keyword arguments:
+
+        do_cleanup -- Whether to perform a cleanup (default False)
+        do_backup -- Whether to make a backup (default True)
+        do_rotation -- Whether to perform a rotation (default True)
+        """
         if not self.use_pid_file:
             raise MinecraftBackupRollError("Readonly MinecraftBackupRoll")
         if not self.try_lock():
@@ -1157,6 +1166,15 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
             self.unlock()
 
     def interactive_restore(self, simulate=False):
+        """
+        Interactively restore a world from backup. The world to be restored is
+        selected via a text-based interface, and this function blocks until a
+        selection has been made (and the backup subsequently restored).
+
+        Keyword arguments:
+        simulate -- whether or not to simulate the restore operation
+            (default False)
+        """
         self._force_lock_now()
         try:
             interface = MinecraftInteractiveRestoreInterface(self.worldfolder,
