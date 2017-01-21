@@ -973,13 +973,81 @@ class MinecraftInteractiveRestoreInterface:
 
 
 class MinecraftBackupRoll:
-    def __init__(self, simulate=False, verbose=False, config=CONFIG,
-                 config_file=None, use_pid_file=True, selected_worlds=[]):
+    """
+    MinecraftBackupRoll - Class that encapsulates a backuproll operation. Will
+    usually be instantiated once if run as a script, and subsequently used for
+    one or multiple activities.
+
+    Example usage 1:
+
+    minecraft_backup_roll = MinecraftBackupRoll(
+        use_pid_file=True,
+        selected_worlds=["example_world"],
+        verbose=True)
+
+    minecraft_backup_roll.do_activity(do_cleanup=False,
+                                    do_rotation=True,
+                                    do_backup=True)
+
+    Example usage 2:
+
+    minecraft_backup_roll = MinecraftBackupRoll(
+        use_pid_file=True,
+        selected_worlds=["example_world"],
+        verbose=True)
+
+    minecraft_backup_roll.interactive_restore()
+
+    """
+    def __init__(self, simulate=False, verbose=False, config=None,
+                 config_file=None, use_pid_file=True, selected_worlds=None):
+        """
+        Initialize a MinecraftBackupRoll.
+
+
+        Keyword arguments:
+
+        simulate -- if True, perform no destructive operation (default False).
+            Also, implies verbose=True
+
+        verbose -- print things (default False)
+
+        config -- Set config. Will use config loaded by
+            wurstmineberg-common-python if None (ie by default).
+
+            assets/backuproll2.default.json contains the default config, and
+            therefore a complete list of configuration options.
+
+            (default None)
+
+        config_file -- Deprecated in favor of exclusively using the config
+            argument in the spirit of "There should be one -- and preferably
+            only one -- obvious way to do it.".
+
+            Parse this file as JSON, updating the contents of config.
+
+            (default '/opt/wurstmineberg/config/backuproll2.json')
+
+        use_pid_file -- use a pidfile to avoid making a huge mess. Needs to be
+            True for this MinecraftBackupRoll to perform write operations.
+
+            (default True)
+
+        selected_worlds -- sequence of world names to operate on. If None or
+            empty, use the worlds set in the config.
+
+            (default None)
+        """
+        if selected_worlds is None:
+            selected_worlds = []
+        if config is None:
+            config = CONFIG
+
         self.config = config.copy()
         self.use_pid_file = use_pid_file
 
         if not config_file is None:
-            config_file='/opt/wurstMineberg/config/backuproll2.json'
+            config_file='/opt/wurstmineberg/config/backuproll2.json'
             raise DeprecationWarning(
 """
 The `config_file` keyword argument for MinecraftBackupRoll.__init__ is
