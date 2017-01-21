@@ -1213,7 +1213,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
             raise MinecraftBackupRollError("PID file exists and other process still running!")
 
 
-if __name__ == "__main__":
+def main():
     arguments = docopt.docopt(__doc__, version='Minecraft backup roll ' + __version__)
 
     selected_worlds = []
@@ -1276,3 +1276,7 @@ if __name__ == "__main__":
         minecraft_backup_roll.interactive_restore()
     else:
         minecraft_backup_roll.do_activity(do_cleanup=do_cleanup, do_rotation=do_rotation, do_backup=do_backup)
+
+
+if __name__ == "__main__":
+    main()
