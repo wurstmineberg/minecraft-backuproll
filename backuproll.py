@@ -254,11 +254,11 @@ class Backup:
         self.name = name
         self.in_progress = in_progress
         if not in_progress:
-            self.directory = os.path.join(retain_group.directory, name)
+            self.directory = retain_group.directory / name
         else:
-            self.directory = os.path.join(retain_group.directory, name + '.in-progress')
-            if not os.path.exists(self.directory):
-                os.makedirs(self.directory)
+            self.directory = retain_group.directory / '{}.in-progress'.format(name)
+            if not self.directory.exists():
+                self.directory.mkdir(parents=True)
         self.dateformat = dateformat
         self.prefix = prefix
         self.suffix = suffix
@@ -274,8 +274,8 @@ class Backup:
         if self.readonly:
             raise BackupStoreReadonlyError("Can't finalize backup. Store is readonly.")
         if self.in_progress:
-            newdir = os.path.join(self.retain_group.directory, self.name)
-            os.rename(self.directory, newdir)
+            newdir = self.retain_group.directory / self.name
+            self.directory.rename(newdir)
             self.directory = newdir
         else:
             raise ValueError("Can't finalize an already finalized backup!")
@@ -293,7 +293,7 @@ class Backup:
         if subdir is None:
             subdir = self.retain_group.collection.name
         with tarfile.open(filename, mode='w:'+compression) as f:
-            f.add(os.path.join(self.directory, subdir), arcname='')
+            f.add(str(self.directory / subdir), arcname='')
 
     def tar_file_generator(self, subdir=None, bufsize=10*1024*1024, compression='gz'):
         """Creates a tar file and yields the results in blocks of 'bufsize'"""
@@ -321,8 +321,8 @@ class Backup:
             except GeneratorExit:
                 return
 
-        path = os.path.join(self.directory, subdir)
-        threading.Thread(target=tar_write_thread, args=(buf, 'w|'+compression, path, is_done_event), name="tarfile").start()
+        path = self.directory / subdir
+        threading.Thread(target=tar_write_thread, args=(buf, 'w|'+compression, str(path), is_done_event), name="tarfile").start()
 
         try:
             while True:
@@ -340,9 +340,9 @@ class Backup:
 class BackupRetainGroup:
     def __init__(self, collection, name, dateformat, prefix=None, suffix=None, readonly=False):
         self.collection = collection
-        self.directory = os.path.join(collection.directory, name)
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
+        self.directory = collection.directory / name
+        if not self.directory.exists():
+            self.directory.mkdir(parents=True)
         self.dateformat = dateformat
         if not prefix:
             self.prefix = self.collection.name + '_'
@@ -356,14 +356,14 @@ class BackupRetainGroup:
         self.readonly = readonly
 
     def get_backup(self, name):
-        path = os.path.join(self.directory, name)
-        if not os.path.exists(path):
+        path = self.directory / name
+        if not path.exists():
             return None
         in_progress = False
         if name.endswith('.in-progress'):
             name = name[:-len('.in-progress')]
             in_progress = True
-        return Backup(self, name, self.dateformat, self.prefix, self.suffix, in_progress = in_progress, readonly=self.readonly)
+        return Backup(self, name, self.dateformat, self.prefix, self.suffix, in_progress=in_progress, readonly=self.readonly)
 
     def get_backups_for_date(self, date):
         backups = self.list_backups()
@@ -399,29 +399,30 @@ class BackupRetainGroup:
 
     def list_all_backups(self):
         try:
-            folders = [ f for f in os.listdir(self.directory) if os.path.isdir(os.path.join(self.directory, f)) and
-                f.startswith(self.prefix) and f.endswith(self.suffix)]
-            backups = [ self.get_backup(f) for f in folders ]
+            folders = [f.name for f in self.directory.iterdir() if f.is_dir() and
+                f.name.startswith(self.prefix) and f.name.endswith(self.suffix)]
+            backups = [self.get_backup(f) for f in folders]
             return self.sorted_backups(backups)
         except FileNotFoundError:
             return []
 
     def list_in_progress_backups(self):
-        return [ f for f in self.list_all_backups() if f.in_progress ]
+        return [backup for backup in self.list_all_backups() if f.in_progress]
 
     def list_backups(self):
-        return [ f for f in self.list_all_backups() if not f.in_progress ]
+        return [backup for backup in self.list_all_backups() if not f.in_progress]
 
     def get_latest_backup(self):
-        if len(self.list_backups()) > 0:
-            return self.list_backups()[-1]
+        backups = self.list_backups()
+        if len(backups) > 0:
+            return backups[-1]
         return None
 
 class BackupCollection:
     def __init__(self, store, name, dateformat, prefix=None, suffix=None, readonly=False):
         self.store = store
         self.name = name
-        self.directory = os.path.join(store.directory, name)
+        self.directory = store.directory / name
         self.dateformat = dateformat
         self.prefix = prefix
         self.suffix = suffix
@@ -439,9 +440,8 @@ class BackupCollection:
             raise BackupError("Invalid retain group {}".format(name))
 
     def list_retain_groups(self):
-        return [ self.get_retain_group(f) for f in os.listdir(self.directory)
-            if os.path.isdir(os.path.join(self.directory, f)) and
-            not os.path.islink(os.path.join(self.directory, f)) ]
+        return [self.get_retain_group(f.name) for f in self.directory.iterdir()
+            if f.is_dir() and not f.is_symlink()]
 
     def __repr__(self):
         return "<BackupCollection at {}>".format(self.directory)
@@ -453,16 +453,16 @@ class BackupStore:
         self.readonly = readonly
 
     def get_collection(self, name, prefix=None, suffix=None):
-        path = os.path.join(self.directory, name)
-        if not os.path.exists(path):
+        path = self.directory / name
+        if not path.exists():
             if self.readonly:
                 raise BackupStoreReadonlyError("Collection not found. Not creating because readonly flag is set.")
             else:
-                os.makedirs(path)
+                path.mkdir(parents=True)
         return BackupCollection(self, name, self.dateformat, prefix=prefix, suffix=suffix, readonly=self.readonly)
 
     def list_collections(self):
-        return [ self.get_collection(f) for f in os.listdir(self.directory) if os.path.isdir(os.path.join(self.directory, f)) ]
+        return [self.get_collection(f.name) for f in self.directory.iterdir() if f.is_dir()]
 
     def __repr__(self):
         return "<BackupStore at {}>".format(self.directory)
@@ -556,18 +556,18 @@ class BackupRotation:
         return deletion_backups
 
     def promote_backup_to_retain_group(self, backup, retain_group):
-        backupdir = os.path.join(retain_group.directory, backup.name)
+        backupdir = retain_group.directory / backup.name
         if self.verbose:
             print("Promoting {} to dir: {}".format(backup, backupdir))
         if not self.simulate:
-            shutil.copytree(backup.directory, backupdir, copy_function=os.link)
+            shutil.copytree(str(backup.directory), str(backupdir), copy_function=os.link) #TODO update to use pathlib
             # This is now the latest backup in the group. create latest symlink.
-            link_location = os.path.join(retain_group.directory, 'latest')
+            link_location = retain_group.directory / 'latest'
             try:
-                os.remove(link_location)
+                link_location.unlink()
             except OSError:
                 pass
-            os.symlink(backupdir, link_location)
+            link_location.symlink_to(backupdir)
 
     def promote_backups(self):
         date = datetime.datetime.utcnow().date()
@@ -622,39 +622,39 @@ class RsyncBackupCommand:
         # Find out if there are older backups
         latest_backup = self.retain_group.get_latest_backup()
         if latest_backup:
-            args += ['--link-dest=' + latest_backup.directory]
+            args += ['--link-dest={}'.format(latest_backup.directory)]
 
         if not backup_name:
             new_backup = self.retain_group.new_empty_backup()
         else:
             new_backup = self.retain_group.new_backup_named(backup_name)
-        args += [self.source, new_backup.directory]
+        args += [str(self.source), str(new_backup.directory)]
 
         ret = self.run_rsync(args)
         if not self.simulate:
             if ret == 0:
                 new_backup.finalize()
                 # update the 'latest' symlinks
-                link_locations = [os.path.join(self.retain_group.directory, 'latest'), os.path.join(self.retain_group.collection.directory, 'latest')]
+                link_locations = [self.retain_group.directory / 'latest', self.retain_group.collection.directory / 'latest']
                 for location in link_locations:
                     try:
-                        os.remove(location)
+                        location.unlink()
                     except OSError:
                         pass
-                    os.symlink(new_backup.directory, location)
+                    location.symlink_to(new_backup.directory)
                 return True
             return False
         else:
             return True
 
 
-    def run_restore(self, backup=None, subdirectory=""):
+    def run_restore(self, backup=None, subdirectory=''):
         world_name = backup.retain_group.collection.name
-        backup_path = os.path.join(backup.directory, world_name, subdirectory) + '/'
-        restore_path = os.path.join(self.source, subdirectory)
+        backup_path = backup.directory / world_name / subdirectory
+        restore_path = self.source / subdirectory
 
         args = list(self.rsync_flags)
-        args += [backup_path, restore_path]
+        args += [str(backup_path), str(restore_path)]
         ret = self.run_rsync(args)
         if ret != 0:
             return False
@@ -704,7 +704,7 @@ class MinecraftBackupRunner:
     def backup_world(self, world):
         if self.verbose:
             print("Running backup for world {}".format(world))
-        worlddir = os.path.join(self.worldsdir, world) + '/'
+        worlddir = self.worldsdir / world
         backup_collection = self.get_collection(world)
         retain_group = backup_collection.get_retain_group(RETENTION_RECENT)
         runner = RsyncBackupCommand(worlddir, retain_group, simulate=self.simulate, verbose=self.verbose)
@@ -762,7 +762,7 @@ class MinecraftBackupRunner:
                 rotation.cleanup_backups()
 
     def restore_world(self, backup, subdirectory, pre_restore_command=None, post_restore_command=None):
-        worlddir = os.path.join(self.worldsdir, backup.retain_group.collection.name)
+        worlddir = self.worldsdir / backup.retain_group.collection.name
         runner = RsyncBackupCommand(worlddir, backup.retain_group, simulate=self.simulate, verbose=self.verbose)
         world_name = backup.retain_group.collection.name
         if verbose:
@@ -950,7 +950,7 @@ class MinecraftInteractiveRestoreInterface:
                 "Run pre-restore hook: {}.\n "
                 "Run post-restore hook: {}.\n "
                 "Only restore world subdirectory: {}\n ".format(backup.name,
-                os.path.join(self.worldsdir, backup.retain_group.collection.name),
+                str(self.worldsdir / backup.retain_group.collection.name),
                 run_pre_restore,
                 run_post_restore,
                 world_only),
@@ -1067,8 +1067,8 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
             print("No world selected and none found in the config file. Exiting.")
             raise MinecraftBackupRollError("Nothing to do.")
 
-        self.backupfolder = self.config['backupfolder']
-        self.worldfolder = self.config['worldfolder']
+        self.backupfolder = pathlib.Path(self.config['backupfolder'])
+        self.worldfolder = pathlib.Path(self.config['worldfolder'])
         self.dateformat = self.config['dateformat']
         self.worldconfig = self.config['worlds']
         self.locked = False
@@ -1139,7 +1139,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
     def _do_restore(self, backup, world_only=True, pre_restore_command=None, post_restore_command=None):
         if world_only:
             restore_subdirectory = 'world'
-            if not os.path.exists(os.path.join(backup.directory, restore_subdirectory)):
+            if not (backup.directory / restore_subdirectory).exists():
                 restore_subdirectory = interface.backup.retain_group.collection.name
         else:
             restore_subdirectory = ''
@@ -1176,19 +1176,19 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
 
     def unlock(self):
         if self.locked:
-            os.remove(self.config['pidfile'])
+            pathlib.Path(self.config['pidfile']).unlink()
         else:
             raise MinecraftBackupRollError("Wasn't locked in the first place.")
 
     def lock(self):
         """Blocking lock function"""
         while not self.try_lock():
-            os.sleep(1)
+            time.sleep(1)
 
     def try_lock(self):
-        pid_filename = self.config['pidfile']
-        if os.path.isfile(pid_filename):
-            with open(pid_filename, 'r') as pidfile:
+        pid_filename = pathlib.Path(self.config['pidfile'])
+        if pid_filename.is_file():
+            with pid_filename.open() as pidfile:
                 try:
                     pid = int(pidfile.read())
                 except ValueError:
@@ -1201,7 +1201,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
                 except ProcessLookupError:
                     pass
         mypid = os.getpid()
-        with open(pid_filename, "w+") as pidfile:
+        with pid_filename.open('w+') as pidfile:
             pidfile.write(str(mypid))
         self.locked = True
         return True
