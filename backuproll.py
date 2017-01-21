@@ -1212,6 +1212,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
 
     def try_lock(self):
         pid_filename = self.config['pidfile']
+
         if pid_filename.is_file():
             with pid_filename.open() as pidfile:
                 try:
@@ -1225,9 +1226,14 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
                     return False
                 except ProcessLookupError:
                     pass
+
         mypid = os.getpid()
-        with pid_filename.open('w+') as pidfile:
-            pidfile.write(str(mypid))
+        try:
+            with pid_filename.open('x') as pidfile:
+                pidfile.write(str(mypid))
+        except FileExistsError:
+            return False
+
         self.locked = True
         return True
 
