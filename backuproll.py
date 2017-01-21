@@ -290,7 +290,7 @@ class Backup:
     def delete(self):
         if self.readonly:
             raise BackupStoreReadonlyError("Can't delete backup. Store is readonly.")
-        shutil.rmtree(self.directory)
+        shutil.rmtree(str(self.directory))
 
 
     def create_tar_file(self, filename, subdir='', compression='gz'):
