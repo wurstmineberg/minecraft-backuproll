@@ -987,9 +987,9 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
 (and something like wurstmineberg-common-python to generate its contents).
 """)
 
-        with contextlib.suppress(FileNotFoundError):
-            with open(config_file) as file_cfg:
-                self.config.update(json.load(file_cfg))
+            with contextlib.suppress(FileNotFoundError):
+                with open(config_file) as file_cfg:
+                    self.config.update(json.load(file_cfg))
 
         if len(selected_worlds) > 0:
             self.selected_worlds = selected_worlds
