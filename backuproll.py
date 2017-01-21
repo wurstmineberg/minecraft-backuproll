@@ -702,7 +702,7 @@ class MinecraftBackupRunner:
         return self.store.get_collection(world, )
 
     def backup_world(self, world):
-        if verbose:
+        if self.verbose:
             print("Running backup for world {}".format(world))
         worlddir = os.path.join(self.worldsdir, world) + '/'
         backup_collection = self.get_collection(world)
