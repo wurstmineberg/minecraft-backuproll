@@ -1157,7 +1157,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         if world_only:
             restore_subdirectory = 'world'
             if not (backup.directory / restore_subdirectory).exists():
-                restore_subdirectory = interface.backup.retain_group.collection.name
+                restore_subdirectory = backup.retain_group.collection.name
         else:
             restore_subdirectory = ''
         self.minecraft_backup_runner.restore_world(backup,
