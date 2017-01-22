@@ -1155,6 +1155,10 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
                 self._unlock()
 
     def _do_restore(self, backup, world_only=True, pre_restore_command=None, post_restore_command=None):
+        if pre_restore_command is None:
+            pre_restore_command = self.pre_restore_command
+        if post_restore_command is None:
+            post_restore_command = self.post_restore_command
         if world_only:
             restore_subdirectory = 'world'
             if not (backup.directory / restore_subdirectory).exists():
@@ -1170,7 +1174,9 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
     def do_restore(self, backup, world_only=True, pre_restore_command=None, post_restore_command=None):
         self._force_lock_now()
         try:
-            self._do_restore(backup, world_only, pre_restore_command, post_restore_command)
+            self._do_restore(backup, world_only=world_only,
+                             pre_restore_command=pre_restore_command,
+                             post_restore_command=post_restore_command)
         finally:
             self._unlock()
 
@@ -1262,31 +1268,23 @@ def main():
     if arguments['--verbose']:
         verbose = True
 
+    do_backup = False
+    do_cleanup = False
+    do_rotation = False
     if arguments['cron']:
-        do_cleanup = False
         do_backup = True
         do_rotation = True
     elif arguments['backup']:
         do_backup = True
-        do_cleanup = False
-        do_rotation = False
     elif arguments['rotate']:
-        do_backup = False
-        do_cleanup = False
         do_rotation = True
     elif arguments['cleanup']:
-        do_backup = False
         do_cleanup = True
-        do_rotation = False
     elif arguments['restore']:
-        do_backup = False
-        do_cleanup = False
-        do_rotation = False
-        raise NotImplementedError('restore not implemented') #TODO
+        pass
+        #raise NotImplementedError('restore not implemented') #TODO
     elif arguments['restore-interactive']:
-        do_backup = False
-        do_cleanup = False
-        do_rotation = False
+        pass
     else:
         raise NotImplementedError('Subcommand not implemented')
 
