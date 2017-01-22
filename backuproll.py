@@ -15,6 +15,7 @@ Usage:
 
 Options:
   -h, --help         Print this message and exit.
+  --all              Apply the action to all configured worlds. This is the default.
   --cleanup          cron: Clean up the backup directory before operation
   --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/backuproll2.json].
   --no-backup        cron: Do everything but don't run the backup command
