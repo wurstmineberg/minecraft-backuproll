@@ -1138,7 +1138,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         """
         if not self.use_pid_file:
             raise MinecraftBackupRollError("Readonly MinecraftBackupRoll")
-        if not self.try_lock():
+        if not self._try_lock():
             raise MinecraftBackupRollError("PID file exists and other process still running!")
 
         try:
@@ -1150,7 +1150,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
                 self.minecraft_backup_runner.rotate_backups(self.selected_worlds)
         finally:
             if self.use_pid_file:
-                self.unlock()
+                self._unlock()
 
     def _do_restore(self, backup, world_only=True, pre_restore_command=None, post_restore_command=None):
         if world_only:
@@ -1170,7 +1170,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         try:
             self._do_restore(backup, world_only, pre_restore_command, post_restore_command)
         finally:
-            self.unlock()
+            self._unlock()
 
     def interactive_restore(self, simulate=False):
         """
@@ -1197,20 +1197,20 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
                 post_cmd = self.post_restore_command if interface.run_post_restore else None
                 self._do_restore(backup, interface.world_only, pre_cmd, post_cmd)
         finally:
-            self.unlock()
+            self._unlock()
 
-    def unlock(self):
+    def _unlock(self):
         if self.locked:
             self.config['pidfile'].unlink()
         else:
             raise MinecraftBackupRollError("Wasn't locked in the first place.")
 
-    def lock(self):
+    def _lock(self):
         """Blocking lock function"""
-        while not self.try_lock():
+        while not self._try_lock():
             time.sleep(1)
 
-    def try_lock(self):
+    def _try_lock(self):
         pid_filename = self.config['pidfile']
 
         if pid_filename.is_file():
@@ -1240,7 +1240,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
     def _force_lock_now(self):
         if not self.use_pid_file:
             raise MinecraftBackupRollError("Readonly MinecraftBackupRoll")
-        if not self.try_lock():
+        if not self._try_lock():
             raise MinecraftBackupRollError("PID file exists and other process still running!")
 
 
