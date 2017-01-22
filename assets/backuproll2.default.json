@@ -7,15 +7,6 @@
     "backupfolder": "/mnt/backup/world",
     "worldfolder": "/opt/wurstmineberg/world",
     "dateformat": "%Y-%m-%dT%H:%M:%S",
-    "worlds": {
-        "testworld": {
-            "keep": {
-                "recent": 6,
-                "daily": 10,
-                "weekly": 4,
-                "monthly": 6
-            }
-        }
-    },
+    "worlds": {},
     "pidfile": "/var/local/wurstmineberg/backuproll.pid"
 }
