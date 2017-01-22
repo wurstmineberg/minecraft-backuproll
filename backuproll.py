@@ -772,6 +772,7 @@ class MinecraftBackupRunner:
         worlddir = self.worldsdir / backup.retain_group.collection.name
         runner = RsyncBackupCommand(worlddir, backup.retain_group, simulate=self.simulate, verbose=self.verbose)
         world_name = backup.retain_group.collection.name
+        out = None if self.verbose else subprocess.DEVNULL
         if self.verbose:
             print("Restoring world {} from backup {}".format(world_name, backup.name))
         if pre_restore_command:
