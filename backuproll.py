@@ -1302,7 +1302,7 @@ def main():
         verbose=verbose)
 
     if arguments['restore']:
-        minecraft_backup_roll.interactive_restore(backup=arguments['<backup>'])
+        minecraft_backup_roll.do_restore(backup=arguments['<backup>'])
     elif arguments['restore-interactive']:
         minecraft_backup_roll.interactive_restore()
     else:
