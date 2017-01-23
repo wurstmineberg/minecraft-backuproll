@@ -23,4 +23,3 @@ setup(name='minecraft-backuproll',
             "setuptools-scm",
         ],
     )
-
