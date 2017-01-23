@@ -1,6 +1,6 @@
 **backuproll** is a script to create and manage backups for [Minecraft](https://minecraft.net/) servers, intended to be used as an hourly [cron](https://en.wikipedia.org/wiki/Cron)job.
 
-This is version 2.0.0 of backuproll ([semver](http://semver.org/)). The versioned API includes all documented non-private functions (ie those with names that don't start with an underscore) of the `MinecraftBackupRoll` class, as well as the configuration file.
+This is version 2.0.0 of backuproll ([semver](http://semver.org/)). The versioned API includes all documented non-private functions (ie those with names that don't start with an underscore) of the `MinecraftBackupRoll` class, as well as the command-line interface (see `backuproll --help`) and configuration file.
 
 # Configuration
 
