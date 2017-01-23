@@ -1,36 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""Backup roll script for one or more Minecraft servers
-
-Usage:
-  backuproll [options] cron [<world>]
-  backuproll [options] backup [<world>]
-  backuproll [options] rotate [<world>]
-  backuproll [options] cleanup [<world>]
-  backuproll [options] restore-interactive
-  backuproll [options] restore <world> <backup>
-  backuproll -h | --help
-  backuproll --version
-
-Options:
-  -h, --help         Print this message and exit.
-  --all              Apply the action to all configured worlds. This is the default.
-  --cleanup          cron: Clean up the backup directory before operation
-  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/backuproll2.json].
-  --no-backup        cron: Do everything but don't run the backup command
-  --no-rotation      cron: Don't rotate the backup directory
-  --simulate         Don't do any destructive operation, implies --verbose
-  --verbose          Print things.
-  --version          Print version info and exit.
-"""
-
 import sys
 
+import byte_fifo
 import contextlib
-import curses
 import datetime
-import docopt
 import io
 import json
 import os
@@ -40,8 +12,6 @@ import subprocess
 import tarfile
 import threading
 import time
-
-from curses import panel
 
 from version import __version__
 
@@ -111,150 +81,6 @@ def __my_write(self, buf):
             time.sleep(0)
 tarfile._LowLevelFile.write = __my_write
 
-"""Implementation from https://github.com/hbock/byte-fifo
-
-Thread safe
-"""
-class BytesFIFO(object):
-    """
-    A FIFO that can store a fixed number of bytes.
-    """
-    def __init__(self, init_size):
-        """ Create a FIFO of ``init_size`` bytes. """
-        self._buffer = io.BytesIO(b"\x00"*init_size)
-        self._size = init_size
-        self._filled = 0
-        self._read_ptr = 0
-        self._write_ptr = 0
-        self.lock = threading.Lock()
-
-    def __bool__(self):
-        return self._size > 0
-
-    def read(self, size=-1):
-        """
-        Read at most ``size`` bytes from the FIFO.
-
-        If less than ``size`` bytes are available, or ``size`` is negative,
-        return all remaining bytes.
-        """
-        self.lock.acquire()
-        if size < 0:
-            size = self._filled
-
-        # Go to read pointer
-        self._buffer.seek(self._read_ptr)
-
-        # Figure out how many bytes we can really read
-        size = min(size, self._filled)
-        contig = self._size - self._read_ptr
-        contig_read = min(contig, size)
-
-        ret =  self._buffer.read(contig_read)
-        self._read_ptr += contig_read
-        if contig_read < size:
-            leftover_size = size - contig_read
-            self._buffer.seek(0)
-            ret += self._buffer.read(leftover_size)
-            self._read_ptr = leftover_size
-
-        self._filled -= size
-
-        self.lock.release()
-        return ret
-
-    def write(self, data):
-        """
-        Write as many bytes of ``data`` as are free in the FIFO.
-
-        If less than ``len(data)`` bytes are free, write as many as can be written.
-        Returns the number of bytes written.
-        """
-        self.lock.acquire()
-        free = self._free()
-        write_size = min(len(data), free)
-
-        if write_size:
-            contig = self._size - self._write_ptr
-            contig_write = min(contig, write_size)
-            # TODO: avoid 0 write
-            # TODO: avoid copy
-            # TODO: test performance of above
-            self._buffer.seek(self._write_ptr)
-            self._buffer.write(data[:contig_write])
-            self._write_ptr += contig_write
-
-            if contig < write_size:
-                self._buffer.seek(0)
-                self._buffer.write(data[contig_write:write_size])
-                #self._buffer.write(buffer(data, contig_write, write_size - contig_write))
-                self._write_ptr = write_size - contig_write
-
-        self._filled += write_size
-
-        self.lock.release()
-        return write_size
-
-    def flush(self):
-        """ Flush all data from the FIFO. """
-        self._filled = 0
-        self._read_ptr = 0
-        self._write_ptr = 0
-
-    def _free(self):
-        """ Return an approximate number of bytes that can be written to the FIFO. """
-        return self._size - self._filled
-
-    def free(self):
-        """ Return the number of bytes that can be written to the FIFO. """
-        self.lock.acquire()
-        size = self._free()
-        self.lock.release()
-        return size
-
-    def capacity(self):
-        """ Return the total space allocated for this FIFO. """
-        return self._size
-
-    def __len__(self):
-        """ Return the approximate amount of data filled in FIFO """
-        return self._filled
-
-    def __nonzero__(self):
-        """ Return ```True``` if the FIFO is not empty. """
-        return self._filled > 0
-
-    def resize(self, new_size):
-        """
-        Resize FIFO to contain ``new_size`` bytes. If FIFO currently has
-        more than ``new_size`` bytes filled, :exc:`ValueError` is raised.
-        If ``new_size`` is less than 1, :exc:`ValueError` is raised.
-
-        If ``new_size`` is smaller than the current size, the internal
-        buffer is not contracted (yet).
-        """
-        self.lock.acquire()
-        if new_size < 1:
-            raise ValueError("Cannot resize to zero or less bytes.")
-
-        if new_size < self._filled:
-            raise ValueError("Cannot contract FIFO to less than {} bytes, "
-                             "or data will be lost.".format(self._filled))
-
-        # original data is non-contiguous. we need to copy old data,
-        # re-write to the beginning of the buffer, and re-sync
-        # the read and write pointers.
-        if self._read_ptr >= self._write_ptr:
-            old_data = self.read(self._filled)
-            self._buffer.seek(0)
-            self._buffer.write(old_data)
-            self._filled = len(old_data)
-            self._read_ptr = 0
-            self._write_ptr = self._filled
-
-        self._size = new_size
-        self.lock.release()
-
 
 class Backup:
     def __init__(self, retain_group, name, dateformat, prefix="", suffix="", in_progress=False, readonly=False):
@@ -307,7 +133,7 @@ class Backup:
         """Creates a tar file and yields the results in blocks of 'bufsize'"""
         if subdir is None:
             subdir = self.retain_group.collection.name
-        buf = BytesFIFO(bufsize)
+        buf = byte_fifo.BytesFIFO(bufsize)
         is_done_event = threading.Event()
         abort_event = threading.Event()
         def tar_write_thread(fileobj, mode, path, is_done_event):
@@ -802,185 +628,6 @@ class MinecraftBackupRunner:
             raise BackupError("Restore command failed!")
 
 
-
-class CursesMenu(object):
-    def __init__(self, items, stdscreen, title=None, exit_title="exit"):
-        self.window = stdscreen.subwin(0,0)
-        self.window.keypad(1)
-        self.panel = panel.new_panel(self.window)
-        self.panel.hide()
-        panel.update_panels()
-
-        self.position = 0
-        self.items = items
-        self.items.append((exit_title, 'exit', None))
-        self.title = title
-        self.should_exit = False
-
-    def navigate(self, n):
-        self.position += n
-        if self.position < 0:
-            self.position = len(self.items)-1
-        elif self.position >= len(self.items):
-            self.position = 0
-
-    def display(self):
-        self.panel.top()
-        self.panel.show()
-        self.window.clear()
-
-        while True:
-            self.window.refresh()
-            curses.doupdate()
-
-            if self.title:
-                self.window.addstr(1, 1, self.title)
-
-            for index, item in enumerate(self.items):
-                if index == self.position:
-                    mode = curses.A_REVERSE
-                else:
-                    mode = curses.A_NORMAL
-
-                msg = '%d. %s' % (index, item[0])
-                offset = 1
-                if self.title:
-                    offset = 2
-                    offset += len(self.title.splitlines())
-                self.window.addstr(offset+index, 1, msg, mode)
-
-            key = self.window.getch()
-
-            if key in [curses.KEY_ENTER, ord('\n')]:
-                if self.position == len(self.items)-1:
-                    break
-                else:
-                    self.items[self.position][1](*self.items[self.position][2])
-                    if self.should_exit:
-                        break
-
-            elif key == curses.KEY_UP:
-                self.navigate(-1)
-
-            elif key == curses.KEY_DOWN:
-                self.navigate(1)
-
-        self.window.clear()
-        self.panel.hide()
-        panel.update_panels()
-        curses.doupdate()
-
-
-class MinecraftInteractiveRestoreInterface:
-
-    def __init__(self,
-                 worldsdir,
-                 store,
-                 dateformat,
-                 pre_restore_command = None,
-                 post_restore_command = None,
-                 simulate = False):
-        self.worldsdir = worldsdir
-        self.store = store
-        self.pre_restore_command = pre_restore_command
-        self.post_restore_command = post_restore_command
-        self.dateformat = dateformat
-        self.simulate = simulate
-        self.menus = []
-        self.should_do_restore = False
-
-    def display(self):
-        def interface(screen):
-            self.screen = screen
-            screen.clear()
-            curses.curs_set(0)
-
-            world_menu = []
-            for world in self.store.list_collections():
-                world_menu.append((world.name, self.select_retain_group, (world,)))
-
-            main_menu = CursesMenu(world_menu, self.screen, title="Select a world to restore backups from")
-            self.menus.append(main_menu)
-            main_menu.display()
-
-        curses.wrapper(interface)
-
-    def select_retain_group(self, world):
-        items = []
-        for retain_group in world.list_retain_groups():
-            items.append((retain_group.name, self.select_backup, (retain_group,)))
-        menu = CursesMenu(items, self.screen, title="Select a backup group", exit_title="back")
-        self.menus.append(menu)
-        menu.display()
-
-    def select_backup(self, retain_group):
-        items = []
-        for backup in retain_group.list_backups():
-            items.append((backup.name, self.confirm_pre_restore, (backup,)))
-        menu = CursesMenu(items, self.screen, title="Select a backup", exit_title="back")
-        self.menus.append(menu)
-        menu.display()
-
-    def confirm_pre_restore(self, backup):
-        items = [
-            ("Run {}".format(self.pre_restore_command), self.confirm_post_restore, (backup, True)),
-            ("Don't run pre-restore command", self.confirm_post_restore, (backup, False))
-        ]
-        menu = CursesMenu(items, self.screen, title="Do you want to run the pre-restore command?", exit_title="back")
-        self.menus.append(menu)
-        menu.display()
-
-    def confirm_post_restore(self, backup, run_pre_restore):
-        items = [
-            ("Run {}".format(self.post_restore_command), self.restore_mode, (backup, run_pre_restore, True)),
-            ("Don't run post-restore command", self.restore_mode, (backup, run_pre_restore, False))
-        ]
-        menu = CursesMenu(items, self.screen, title="Do you want to run the post-restore command after restore?", exit_title="back")
-        self.menus.append(menu)
-        menu.display()
-
-    def restore_mode(self, backup, run_pre_restore, run_post_restore):
-        items = [
-            ("Only restore the world subdirectory", self.confirm, (backup, run_pre_restore, run_post_restore, True)),
-            ("Restore everything", self.confirm, (backup, run_pre_restore, run_post_restore, False))
-        ]
-        menu = CursesMenu(items, self.screen, title="What do you want to restore?", exit_title="back")
-        self.menus.append(menu)
-        menu.display()
-
-    def confirm(self, backup, run_pre_restore, run_post_restore, world_only):
-        items = [
-            ("Confirm. Run Restore now!", self.confirmed_restore, (backup, run_pre_restore, run_post_restore, world_only)),
-            ("HALP No! Abort! (exits)", self.exit, ())
-        ]
-        menu = CursesMenu(items, self.screen, title="Please confirm your selection:\n "
-                "Restore {}\n "
-                "to {}.\n "
-                "Run pre-restore hook: {}.\n "
-                "Run post-restore hook: {}.\n "
-                "Only restore world subdirectory: {}\n ".format(backup.name,
-                str(self.worldsdir / backup.retain_group.collection.name),
-                run_pre_restore,
-                run_post_restore,
-                world_only),
-            exit_title="back")
-        self.menus.append(menu)
-        menu.display()
-
-    def confirmed_restore(self, backup, run_pre_restore, run_post_restore, world_only):
-        self.backup = backup
-        self.world_only = world_only
-        self.run_pre_restore = run_pre_restore
-        self.run_post_restore = run_post_restore
-
-        self.should_do_restore = True
-        for menu in self.menus:
-            menu.should_exit = True
-
-    def exit(self):
-        sys.exit(1)
-
-
 class MinecraftBackupRoll:
     """
     MinecraftBackupRoll - Class that encapsulates a backuproll operation. Will
@@ -1192,12 +839,13 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         """
         self._force_lock_now()
         try:
-            interface = MinecraftInteractiveRestoreInterface(self.worldfolder,
-                                                             self.store,
-                                                             self.dateformat,
-                                                             pre_restore_command = self.pre_restore_command,
-                                                             post_restore_command = self.post_restore_command,
-                                                             simulate = simulate)
+            interface = backuproll.interactive.MinecraftInteractiveRestoreInterface(
+                self.worldfolder,
+                self.store,
+                self.dateformat,
+                pre_restore_command=self.pre_restore_command,
+                post_restore_command=self.post_restore_command,
+                simulate=simulate)
             interface.display()
             if interface.should_do_restore:
                 backup = interface.backup
@@ -1250,64 +898,3 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
             raise MinecraftBackupRollError("Readonly MinecraftBackupRoll")
         if not self._try_lock():
             raise MinecraftBackupRollError("PID file exists and other process still running!")
-
-
-def main():
-    arguments = docopt.docopt(__doc__, version='Minecraft backup roll ' + __version__)
-
-    selected_worlds = []
-    if arguments['<world>'] and not arguments['--all']:
-        selected_worlds = [arguments['<world>']]
-
-    simulate = False
-    verbose = False
-    if arguments['--simulate']:
-        print("Simulating backuproll: No real action will be performed")
-        simulate = True
-        verbose = True
-    if arguments['--verbose']:
-        verbose = True
-
-    do_backup = False
-    do_cleanup = False
-    do_rotation = False
-    if arguments['cron']:
-        do_backup = True
-        do_rotation = True
-    elif arguments['backup']:
-        do_backup = True
-    elif arguments['rotate']:
-        do_rotation = True
-    elif arguments['cleanup']:
-        do_cleanup = True
-    elif arguments['restore']:
-        pass
-        #raise NotImplementedError('restore not implemented') #TODO
-    elif arguments['restore-interactive']:
-        pass
-    else:
-        raise NotImplementedError('Subcommand not implemented')
-
-    if arguments['--cleanup']:
-        do_cleanup = True
-    if arguments['--no-backup']:
-        do_backup = False
-    if arguments['--no-rotation']:
-        do_rotation = False
-
-    minecraft_backup_roll = MinecraftBackupRoll(
-        use_pid_file=True,
-        selected_worlds=selected_worlds,
-        simulate=simulate,
-        verbose=verbose)
-
-    if arguments['restore']:
-        minecraft_backup_roll.do_restore(backup=arguments['<backup>'])
-    elif arguments['restore-interactive']:
-        minecraft_backup_roll.interactive_restore()
-    else:
-        minecraft_backup_roll.do_activity(do_cleanup=do_cleanup, do_rotation=do_rotation, do_backup=do_backup)
-
-
-if __name__ == "__main__":
-    main()

@@ -13,12 +13,9 @@ setup(name='minecraft-backuproll',
         author_email='mail@wurstmineberg.de',
         #py_modules=["backuproll"],
         packages=["backuproll"],
-        package_dir={
-            "backuproll": "",
-        },
         package_data={"backuproll": ["assets/*.json"]},
         use_scm_version = {
-            "write_to": "_version.py",
+            "write_to": "backuproll/_version.py",
         },
         setup_requires=["setuptools_scm"],
         install_requires=[
