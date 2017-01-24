@@ -13,8 +13,6 @@ import tarfile
 import threading
 import time
 
-from version import __version__
-
 from wmb import get_config, from_assets
 
 CONFIG_TYPES = {
