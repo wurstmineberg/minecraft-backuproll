@@ -26,7 +26,7 @@ Options:
 
 import docopt
 
-import backuproll
+import backuproll.core
 
 def main():
     arguments = docopt.docopt(__doc__, version='Minecraft backup roll ' + backuproll.__version__)
@@ -71,7 +71,7 @@ def main():
     if arguments['--no-rotation']:
         do_rotation = False
 
-    minecraft_backup_roll = backuproll.MinecraftBackupRoll(
+    minecraft_backup_roll = backuproll.core.MinecraftBackupRoll(
         use_pid_file=True,
         selected_worlds=selected_worlds,
         simulate=simulate,
