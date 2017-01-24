@@ -21,6 +21,10 @@ setup(name='minecraft-backuproll',
         install_requires=[
             "docopt",
             "setuptools-scm",
+            "byte_fifo",
         ],
+        dependency_links=[
+            "git+https://github.com/wurstmineberg/byte-fifo.git#egg=byte_fifo-0.1_alpha"
+        ]
     )
 
