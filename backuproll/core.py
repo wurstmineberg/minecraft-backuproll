@@ -773,6 +773,12 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         readonly = not self.use_pid_file
         return BackupStore(self.backupfolder, self.dateformat, readonly)
 
+    def get_world(self, world_name):
+        pass #TODO return World object corresponding to the world with the given name
+
+    def get_all_backups(self, world):
+        pass #TODO return a dictionary mapping a datetime object (must be aware or in UTC) to the Backup object with the given timestamp
+
     def do_activity(self, do_cleanup=False, do_backup=True, do_rotation=True):
         """
         Perform the actual operation(s).

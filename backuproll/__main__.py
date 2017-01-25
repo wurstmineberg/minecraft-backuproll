@@ -8,7 +8,7 @@ Usage:
   backuproll [options] rotate [<world>]
   backuproll [options] cleanup [<world>]
   backuproll [options] restore-interactive
-  backuproll [options] restore <world> <backup>
+  backuproll [options] restore <world> <timespec>...
   backuproll -h | --help
   backuproll --version
 
@@ -25,6 +25,7 @@ Options:
 """
 
 import docopt
+import timespec
 
 import backuproll.core
 
@@ -78,7 +79,10 @@ def main():
         verbose=verbose)
 
     if arguments['restore']:
-        minecraft_backup_roll.do_restore(backup=arguments['<backup>'])
+        world = minecraft_backup_roll.get_world(arguments['<world>'])
+        all_backups = minecraft_backup_roll.get_all_backups(world)
+        timestamp = timespec.parse(arguments['<timespec>'], candidates=all_backups.keys(), reverse=True)
+        minecraft_backup_roll.do_restore(backup=all_backups[timestamp])
     elif arguments['restore-interactive']:
         minecraft_backup_roll.interactive_restore()
     else:
