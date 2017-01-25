@@ -774,10 +774,20 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
         return BackupStore(self.backupfolder, self.dateformat, readonly)
 
     def get_world(self, world_name):
-        pass #TODO return World object corresponding to the world with the given name
+        return self.store.get_collection(world_name)
+        # TODO return World object corresponding to the world with the given
+        #  name
+        # TODO debug
 
     def get_all_backups(self, world):
-        pass #TODO return a dictionary mapping a datetime object (must be aware or in UTC) to the Backup object with the given timestamp
+        return {
+            backup.datetime.astimezone(datetime.timezone.utc): backup
+            for backup in retain_group.list_all_backups()
+            for retain_group in world.list_retain_groups()
+        }
+        # TODO debug
+        # TODO return a dictionary mapping a datetime object (must be aware or
+        #  in UTC) to the Backup object with the given timestamp
 
     def do_activity(self, do_cleanup=False, do_backup=True, do_rotation=True):
         """
