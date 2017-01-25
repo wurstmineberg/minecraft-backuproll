@@ -781,7 +781,7 @@ deprecated and will be removed soon. Instead, use the `config` keyword argument
 
     def get_all_backups(self, world):
         return {
-            backup.datetime.astimezone(datetime.timezone.utc): backup
+            backup.datetime.replace(tzinfo=datetime.timezone.utc): backup
             for retain_group in world.list_retain_groups()
             for backup in retain_group.list_all_backups()
         }
