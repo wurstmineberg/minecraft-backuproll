@@ -27,11 +27,10 @@ Options:
 import docopt
 import timespec
 
-from backuproll import MinecraftBackupRoll, __version__
+import backuproll.core
 
 def main():
-    arguments = docopt.docopt(__doc__,
-                              version='Minecraft backup roll ' + __version__)
+    arguments = docopt.docopt(__doc__, version='Minecraft backup roll ' + backuproll.__version__)
 
     selected_worlds = []
     if arguments['<world>'] and not arguments['--all']:
@@ -73,7 +72,7 @@ def main():
     if arguments['--no-rotation']:
         do_rotation = False
 
-    minecraft_backup_roll = MinecraftBackupRoll(
+    minecraft_backup_roll = backuproll.core.MinecraftBackupRoll(
         use_pid_file=True,
         selected_worlds=selected_worlds,
         simulate=simulate,

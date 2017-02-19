@@ -27,8 +27,5 @@ setup(name='minecraft-backuproll',
         dependency_links=[
             "git+https://github.com/wurstmineberg/byte-fifo.git#egg=byte_fifo-0.1_alpha",
             "git+https://github.com/fenhl/timespec.git#egg=timespec",
-        ],
-        scripts=[
-            "broll"
         ]
     )

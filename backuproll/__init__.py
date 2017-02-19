@@ -1,3 +1,1 @@
-
-from .version import __version__
-from .core import MinecraftBackupRoll
+from version import __version__

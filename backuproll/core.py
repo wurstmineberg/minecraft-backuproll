@@ -15,7 +15,7 @@ import time
 
 from wmb import get_config, from_assets
 
-from . import interactive
+import backuproll.interactive
 
 CONFIG_TYPES = {
     "backupfolder": pathlib.Path,
