@@ -243,10 +243,8 @@ class BackupRunner:
         if self.verbose:
             print("Running command '{}'".format(self.command))
         if not self.simulate:
-            out = None if self.verbose else subprocess.DEVNULL
-            retcode = subprocess.call(self.command, stdout=out, stderr=out, shell=True)
-            return retcode == 0
-        return True
+            out = None if self.verbose else subprocess.PIPE
+            return subprocess.run(self.command, stdout=out, stderr=out, shell=True, universal_newlines=True)
 
 def do_backuproll(worlds, backupcommand, has_world_prefix=True, extension='tar.gz', dateformat='%Y-%m-%d_%Hh%M', simulate=False, verbose=False):
     for world in worlds:
@@ -254,8 +252,14 @@ def do_backuproll(worlds, backupcommand, has_world_prefix=True, extension='tar.g
         runner = BackupRunner(command, simulate, verbose)
         ret = runner.run_blocking()
 
-        if not ret:
+        if ret is not None and ret.returncode != 0:
             print("Backup failed! Not running backuproll!", file=sys.stderr)
+            if ret.stdout is not None:
+                print('stdout:')
+                print(ret.stdout)
+            if ret.stderr is not None:
+                print('stderr:')
+                print(ret.stderr)
             exit(1)
 
         prefix = world + '_' if has_world_prefix else ''
